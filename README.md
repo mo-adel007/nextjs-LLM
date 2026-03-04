@@ -203,4 +203,4 @@ llm-copy-demo/
 Start the server and open http://localhost:3000. Verify the default visitor profile triggers a successful LLM call and text rendering.
 Open the Admin preview panel /admin. Change Tone to "Playful" and Visitor to "Returning". Click "Preview". Verify the generated text reflects the changes.
 Simulate Validation Failure: Temporarily hardcode the LLM to return ["fake-claim"] in lib/llm.ts. Watch the server logs. Prove that the system logs Validation Failed, attempts Retry 1, fails again, and returns the expected Fallback JSON payload to the frontend without crashing.
-Technical Architecture & Planning Document v1.0 Prepared for technical discovery and review • March 2026 📄 Save as PDF
+Technical Architecture & Planning Document v1.0 Prepared for technical discovery and review • March 2026
