@@ -1,63 +1,147 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useEffect } from 'react';
+import { DecideResponse } from '@/lib/types';  // Import the typed response for strict typing
+
+// The Main Product Landing Page
+// On load, calls POST /api/decide with a default visitor profile.
+// Renders the LLM-generated (or fallback) headlines in the hero section,
+// plus a developer trace block showing which claims were used and a friendly summary.
+export default function LandingPage() {
+  // Typed state — no `any` — holds the full API response or null before load
+  const [payload, setPayload] = useState<DecideResponse | null>(null);
+  const [loading, setLoading] = useState(true);  // Loading spinner state
+
+  useEffect(() => {
+    // In a production system, the visitor profile would be derived from
+    // cookies, UTM parameters, IP geolocation, user-agent, etc.
+    // For this demo, we simulate a "General Visitor" with Professional tone.
+    async function trackAndDecide() {
+      try {
+        const res = await fetch('/api/decide', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            visitorProfile: 'General Visitor',                   // Default visitor persona
+            rules: { tone: 'Professional', length: 'Short', emphasis: 'Trust' }  // Default rule set
+          })
+        });
+
+        const data: DecideResponse = await res.json();           // Parse the typed response
+        setPayload(data);                                        // Store the full payload in state
+      } catch (err) {
+        console.error('Landing page failed to fetch variant', err);
+        // Absolute worst-case client-side fallback — UI must never break
+        setPayload({
+          headline1: 'Welcome',
+          headline2: 'Get started today.',
+          usedClaimIds: [],
+          usedClaimsDetail: [],
+          isFallback: true,
+          friendlySummary: 'Unable to reach the decision API. Showing default content.'
+        });
+      } finally {
+        setLoading(false);                                       // Stop spinner regardless of outcome
+      }
+    }
+
+    trackAndDecide();
+  }, []);  // Empty dependency array — run once on mount
+
+  // Show a loading spinner while the API call is in flight
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-white text-slate-900 font-sans">
+
+      {/* Navigation Bar */}
+      <nav className="w-full border-b border-slate-100 py-4 px-8 flex justify-between items-center">
+        <div className="font-bold text-xl tracking-tight text-blue-600">
+          Decision<span className="text-slate-900">API</span>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+        <div className="hidden md:flex gap-6 text-sm font-medium text-slate-500">
+          <a href="#" className="hover:text-slate-900">Products</a>
+          <a href="#" className="hover:text-slate-900">Solutions</a>
+          <a href="/admin" className="text-blue-600 hover:text-blue-700 uppercase tracking-wider text-xs">
+            Admin Panel →
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        </div>
+      </nav>
+
+      {/* Hero Section — Renders the LLM-generated headlines */}
+      <main className="max-w-6xl mx-auto px-8 pt-24 pb-32 flex flex-col items-center text-center">
+
+        {/* Primary LLM headline */}
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 max-w-4xl bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600">
+          {payload?.headline1}
+        </h1>
+
+        {/* Secondary LLM headline / subheading */}
+        <p className="text-xl md:text-2xl text-slate-500 mb-10 max-w-2xl leading-relaxed">
+          {payload?.headline2}
+        </p>
+
+        {/* CTA buttons (static — not generated by LLM) */}
+        <div className="flex gap-4">
+          <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all hover:scale-105">
+            Start free trial
+          </button>
+          <button className="bg-white hover:bg-slate-50 text-slate-700 font-semibold py-3 px-8 rounded-full border border-slate-200 transition-colors">
+            Book a demo
+          </button>
+        </div>
+
+        {/* Friendly Summary — Human-readable explanation of what the engine did */}
+        {payload?.friendlySummary && (
+          <div className="mt-16 p-5 bg-blue-50 border border-blue-200 rounded-xl max-w-3xl text-left w-full">
+            <h3 className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-2">
+              What Happened
+            </h3>
+            <p className="text-sm text-blue-900 leading-relaxed">
+              {payload.friendlySummary}
+            </p>
+          </div>
+        )}
+
+        {/* Developer Trace — Shows claim IDs, claim texts, and fallback status */}
+        <div className="mt-8 p-6 bg-slate-50 border border-slate-200 rounded-2xl max-w-3xl text-left w-full">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+              Developer Trace Data
+            </h3>
+            {payload?.isFallback && (
+              <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded font-bold">
+                Fallback Rendered
+              </span>
+            )}
+          </div>
+
+          <div className="text-sm text-slate-600 space-y-2">
+            <p><strong>Claims Used by the Model:</strong></p>
+            {payload?.usedClaimsDetail && payload.usedClaimsDetail.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1">
+                {payload.usedClaimsDetail.map((claim) => (
+                  <li key={claim.id}>
+                    <span className="font-mono text-xs text-slate-500">{claim.id}</span>
+                    <span className="mx-2 text-slate-300">→</span>
+                    <span className="text-slate-700">{claim.text}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <span className="italic text-slate-400">None — Engine bypassed or fallback triggered</span>
+            )}
+
+            <p className="pt-4 text-xs text-slate-400">
+              The text on this page was constrained by the subset validation rule against the allowed claims database.
+            </p>
+          </div>
         </div>
       </main>
     </div>
